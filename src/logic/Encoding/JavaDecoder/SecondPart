@@ -1,0 +1,110 @@
+    }
+
+    public static MyCipher getInstance() {
+        return instance;
+    }
+
+    private ArrayList<String> findFromHex(String hex) throws NullPointerException{
+        for (Map.Entry<String, ArrayList<String>> set :
+                this.map.entrySet()) {
+            if (set.getKey().equals(hex)){
+                return set.getValue();
+            }
+        }
+        //TODO  check for double encoding
+        return new ArrayList<String>();
+    }
+
+    public String decode(String ciphertextHex) {
+        try {
+
+            String keyHex = this.mainKeyHex;
+            String ivHex = this.mainIvHex;
+            byte[] iv = hexStringToByteArray(ivHex);
+            byte[] keyBytes = hexStringToByteArray(keyHex);
+
+            // Create a SecretKeySpec from the key
+            SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "AES");
+
+            // Create an AES cipher with CFB mode
+            Cipher cipher = Cipher.getInstance("AES/CFB/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, keySpec, new IvParameterSpec(iv));
+
+            // Convert hex ciphertext to byte array
+            byte[] ciphertext = hexStringToByteArray(ciphertextHex);
+
+            // Decrypt the ciphertext
+            byte[] decryptedBytes = cipher.doFinal(ciphertext);
+
+            // Convert the decrypted bytes to a string
+            return new String(decryptedBytes);
+        } catch (Exception e) {
+            //System.out.println("Error in decoding");
+            return "Error";
+        }
+
+    }
+
+    public String encode(Object o) {
+        String value = o.toString();
+        String keyHex = this.mainKeyHex;
+        String inputString = value;
+        // Convert the hexadecimal key to bytes
+        byte[] key = hexStringToByteArray(keyHex);
+        byte[] iv = hexStringToByteArray(mainIvHex);
+        try {
+            // Create an AES cipher with the key and IV
+            Cipher cipher = Cipher.getInstance("AES/CFB/NoPadding");
+            SecretKeySpec secretKeySpec = new SecretKeySpec(key, "AES");
+            IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
+            cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, ivParameterSpec);
+
+            // Encrypt the input string
+            byte[] ciphertext = cipher.doFinal(inputString.getBytes(StandardCharsets.UTF_8));
+            String ivHex = byteArrayToHexString(iv);
+            String ciphertextHex = byteArrayToHexString(ciphertext);
+            ArrayList<String> tmpArray = new ArrayList<>();
+            tmpArray.add(keyHex);
+            tmpArray.add(ivHex);
+            this.map.put(ciphertextHex,tmpArray);
+            return ciphertextHex;
+        } catch (Exception e){
+            //System.out.println("Error in decoding");
+            return "Error";
+        }
+    }
+
+    private byte[] hexStringToByteArray(String s) {
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                    + Character.digit(s.charAt(i + 1), 16));
+        }
+        return data;
+    }
+
+    private static String generateRandomHexKey() {
+        SecureRandom random = new SecureRandom();
+        byte[] key = new byte[16];
+        random.nextBytes(key);
+        return byteArrayToHexString(key);
+    }
+
+    private static byte[] generateRandomIV() {
+        SecureRandom random = new SecureRandom();
+        byte[] iv = new byte[16];
+        random.nextBytes(iv);
+        return iv;
+    }
+
+    private static String byteArrayToHexString(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
+    }
+
+
+}
